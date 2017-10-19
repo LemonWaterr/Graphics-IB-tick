@@ -13,7 +13,7 @@ in vec3 pos;
 out vec3 color;
 
 #define PI 3.1415926535897932384626433832795
-#define RENDER_DEPTH 50
+#define RENDER_DEPTH 800
 #define CLOSE_ENOUGH 0.00001
 
 #define BACKGROUND -1
@@ -47,8 +47,27 @@ float sphere(vec3 pt) {
   return length(pt) - 1;
 }
 
+float cube(vec3 p) {
+	vec3 d = abs(p) - vec3(1); // 1 = radius
+	return min(max(d.x, max(d.y, d.z)), 0.0) + length(max(d, 0.0));
+}
+
+float cubeTrans(vec3 p, vec3 trans){
+	return cube(p - trans);
+}
+
+float getSDF(vec3 p){
+	float cube1 = cubeTrans(p, vec3(-3,0,-3));
+	float cube2 = cubeTrans(p, vec3(3,0,-3));
+	float cube3 = cubeTrans(p, vec3(-3,0,3));
+	float cube4 = cubeTrans(p, vec3(3,0,3));
+	return min(cube1, min(cube2, min(cube3, cube4)));
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 vec3 getNormal(vec3 pt) {
-  return normalize(GRADIENT(pt, sphere));
+  return normalize(GRADIENT(pt, getSDF));
 }
 
 vec3 getColor(vec3 pt) {
@@ -83,7 +102,7 @@ vec3 raymarch(vec3 camPos, vec3 rayDir) {
   float t = 0;
 
   for (float d = 1000; step < RENDER_DEPTH && abs(d) > CLOSE_ENOUGH; t += abs(d)) {
-    d = sphere(camPos + t * rayDir);
+	d = getSDF(camPos + t * rayDir);
     step++;
   }
 
