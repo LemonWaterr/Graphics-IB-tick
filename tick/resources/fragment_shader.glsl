@@ -47,6 +47,10 @@ float sphere(vec3 pt) {
   return length(pt) - 1;
 }
 
+float sphereTrans(vec3 p, vec3 trans){
+	return sphere(p - trans);
+}
+
 float cube(vec3 p) {
 	vec3 d = abs(p) - vec3(1); // 1 = radius
 	return min(max(d.x, max(d.y, d.z)), 0.0) + length(max(d, 0.0));
@@ -56,12 +60,26 @@ float cubeTrans(vec3 p, vec3 trans){
 	return cube(p - trans);
 }
 
+float smin(float a, float b) {
+	float k = 0.2;
+	float h = clamp(0.5 + 0.5 * (b - a) / k, 0, 1);
+	return mix(b, a, h) - k * h * (1 - h);
+}
+
 float getSDF(vec3 p){
 	float cube1 = cubeTrans(p, vec3(-3,0,-3));
 	float cube2 = cubeTrans(p, vec3(3,0,-3));
 	float cube3 = cubeTrans(p, vec3(-3,0,3));
 	float cube4 = cubeTrans(p, vec3(3,0,3));
-	return min(cube1, min(cube2, min(cube3, cube4)));
+	float sphere1 = sphereTrans(p, vec3(-2,0,-2));
+	float sphere2 = sphereTrans(p, vec3(4,0,-2));
+	float sphere3 = sphereTrans(p, vec3(-2,0,4));
+	float sphere4 = sphereTrans(p, vec3(4,0,4));
+	float csUnion = min(cube1, sphere1);
+	float csDiff  = max(cube2, -sphere2);
+	float csBlend = smin(cube3, sphere3);
+	float csInter = max(cube4, sphere4);
+	return min(csUnion, min(csDiff, min(csBlend, csInter)));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
