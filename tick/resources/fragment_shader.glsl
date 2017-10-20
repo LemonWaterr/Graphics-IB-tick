@@ -125,7 +125,7 @@ float torusTransRotateZRepeatXZ(vec3 p, vec2 t, vec3 trans, float angle, int r){
 }
 
 float getSDF(vec3 p){
-	float torus1 = torusTransRotateX(p, vec2(3,1), vec3(0,3,0), M_PI/2);
+	float torus1 = torusTransRotateX(p, vec2(3,1), vec3(0,3,0), 0);
 	return torus1;
 }
 
@@ -188,7 +188,7 @@ float shade(vec3 eye, vec3 pt, vec3 n) {
     val += pow(max(dot(r,c), 0), 256);
   }
 
-  val *= shadow(pt);
+  //val *= shadow(pt);
   val += 0.1; //Ambient
   return val;
 }
