@@ -77,6 +77,21 @@ float torus(vec3 p, vec2 t) {
   return length(q) - t.y;
 }
 
+float torusTransRotateX(vec3 p, vec2 t, vec3 trans, float angle){
+	mat4 T = mat4(
+			vec4(1,0,0,trans.x),
+			vec4(0,1,0,trans.y),
+			vec4(0,0,1,trans.z),
+			vec4(0,0,0,1));
+	mat4 R = mat4(
+			vec4(1,0,0,0),
+			vec4(0,cos(angle),-sin(angle),0),
+			vec4(0,sin(angle),cos(angle),0),
+			vec4(0,0,0,1));
+	mat4 invRT = inverse(R * T);
+	return torus((vec4(p, 1) * invRT).xyz, t);
+}
+
 float torusTransRotateXRepeatXZ(vec3 p, vec2 t, vec3 trans, float angle, int r){
 	mat4 T = mat4(
 			vec4(1,0,0,trans.x),
@@ -110,10 +125,8 @@ float torusTransRotateZRepeatXZ(vec3 p, vec2 t, vec3 trans, float angle, int r){
 }
 
 float getSDF(vec3 p){
-	float torus1 = torusTransRotateXRepeatXZ(p, vec2(3,0.5), vec3(0,0,0), M_PI/2, 8);
-	float torus2 = torus(vec3(mod(p.x - 4, 8) - 4, p.y, mod(p.z, 8) - 4), vec2(3, 0.5));
-	float torus3 = torusTransRotateZRepeatXZ(p, vec2(3,0.5), vec3(0,0,0), M_PI/2, 8);
-	return min(torus3, min(torus1, torus2));
+	float torus1 = torusTransRotateX(p, vec2(3,1), vec3(0,3,0), M_PI/2);
+	return torus1;
 }
 
 float getSDFWithPlane(vec3 p){
