@@ -25,6 +25,8 @@ out vec3 color;
     func(vec3(pt.x, pt.y + 0.0001, pt.z)) - func(vec3(pt.x, pt.y - 0.0001, pt.z)), \
     func(vec3(pt.x, pt.y, pt.z + 0.0001)) - func(vec3(pt.x, pt.y, pt.z - 0.0001)))
 
+#define M_PI 3.1415926535897932384626433832795
+
 const vec3 LIGHT_POS[] = vec3[](vec3(5, 18, 10));
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -69,22 +71,49 @@ float smin(float a, float b) {
 float plane(vec3 p){
 	return abs(p.y + 1);
 }
+
+float torus(vec3 p, vec2 t) {
+  vec2 q = vec2(length(p.xz) - t.x, p.y);
+  return length(q) - t.y;
+}
+
+float torusTransRotateXRepeatXZ(vec3 p, vec2 t, vec3 trans, float angle, int r){
+	mat4 T = mat4(
+			vec4(1,0,0,trans.x),
+			vec4(0,1,0,trans.y),
+			vec4(0,0,1,trans.z),
+			vec4(0,0,0,1));
+	mat4 R = mat4(
+			vec4(1,0,0,0),
+			vec4(0,cos(angle),-sin(angle),0),
+			vec4(0,sin(angle),cos(angle),0),
+			vec4(0,0,0,1));
+	mat4 invRT = inverse(R * T);
+	vec3 final = (vec4(mod(p.x - r/2, r) - r/2, p.y, mod(p.z, r) - r/2, 1) * invRT).xyz;
+	return torus(final, t);
+}
+
+float torusTransRotateZRepeatXZ(vec3 p, vec2 t, vec3 trans, float angle, int r){
+	mat4 T = mat4(
+			vec4(1,0,0,trans.x),
+			vec4(0,1,0,trans.y),
+			vec4(0,0,1,trans.z),
+			vec4(0,0,0,1));
+	mat4 R = mat4(
+			vec4(cos(angle),-sin(angle),0,0),
+			vec4(sin(angle),cos(angle),0,0),
+			vec4(0,0,1,0),
+			vec4(0,0,0,1));
+	mat4 invRT = inverse(R * T);
+	vec3 final = (vec4(mod(p.x, r) - r/2, p.y, mod(p.z - r/2, r) - r/2, 1) * invRT).xyz;
+	return torus(final, t);
+}
+
 float getSDF(vec3 p){
-	float cube1 = cubeTrans(p, vec3(-3,0,-3));
-	float cube2 = cubeTrans(p, vec3(3,0,-3));
-	float cube3 = cubeTrans(p, vec3(-3,0,3));
-	float cube4 = cubeTrans(p, vec3(3,0,3));
-
-	float sphere1 = sphereTrans(p, vec3(-2,0,-2));
-	float sphere2 = sphereTrans(p, vec3(4,0,-2));
-	float sphere3 = sphereTrans(p, vec3(-2,0,4));
-	float sphere4 = sphereTrans(p, vec3(4,0,4));
-
-	float csUnion = min(cube1, sphere1);
-	float csDiff  = max(cube2, -sphere2);
-	float csBlend = smin(cube3, sphere3);
-	float csInter = max(cube4, sphere4);
-	return min(csUnion, min(csDiff, min(csBlend, csInter)));
+	float torus1 = torusTransRotateXRepeatXZ(p, vec2(3,0.5), vec3(0,0,0), M_PI/2, 8);
+	float torus2 = torus(vec3(mod(p.x, 8) - 4, p.y, mod(p.z, 8) - 4), vec2(3, 0.5));
+	float torus3 = torusTransRotateZRepeatXZ(p, vec2(3,0.5), vec3(0,0,0), M_PI/2, 8);
+	return min(torus3, min(torus1, torus2));
 }
 
 float getSDFWithPlane(vec3 p){
@@ -112,16 +141,42 @@ vec3 getColor(vec3 pt) {
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+float shadow(vec3 pt) {
+	vec3 lightDir = normalize(LIGHT_POS[0] - pt);
+	float kd = 1;
+	int step = 0;
+	for (float t = 0.1;t < length(LIGHT_POS[0] - pt) && step < RENDER_DEPTH && kd > 0.001; ){
+		float d = abs(getSDF(pt + t * lightDir)); // d = length(current point to an object), t = length(starting point to current point)
+		//if hit an object
+		if (d < 0.001) {
+			kd = 0; //hard shadow
+		//if didn't hit an object
+		} else {
+			kd = min(kd, 16 * d / t);
+		}
+		t += d;
+		step++;
+	}
+	return kd;
+}
 
 float shade(vec3 eye, vec3 pt, vec3 n) {
   float val = 0;
-  
-  val += 0.1;  // Ambient
-  
+  float spec = 0;
+
   for (int i = 0; i < LIGHT_POS.length(); i++) {
-    vec3 l = normalize(LIGHT_POS[i] - pt);
-    val += max(dot(n, l), 0);
+    vec3 l = LIGHT_POS[i] - pt;
+    //diffuse
+    val += max(dot(n, normalize(l)), 0);
+
+    //specular
+    vec3 r = normalize(n * (2 * dot(n,l)) - l);
+    vec3 c = normalize(eye - pt);
+    val += pow(max(dot(r,c), 0), 256);
   }
+
+  val *= shadow(pt);
+  val += 0.1; //Ambient
   return val;
 }
 
