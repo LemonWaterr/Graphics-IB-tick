@@ -89,7 +89,7 @@ float torusTransRotateXRepeatXZ(vec3 p, vec2 t, vec3 trans, float angle, int r){
 			vec4(0,sin(angle),cos(angle),0),
 			vec4(0,0,0,1));
 	mat4 invRT = inverse(R * T);
-	vec3 final = (vec4(mod(p.x - r/2, r) - r/2, p.y, mod(p.z, r) - r/2, 1) * invRT).xyz;
+	vec3 final = (vec4(mod(p.x - 4 + r/2, r) - r/2, p.y, mod(p.z - 8, r) - r/2, 1) * invRT).xyz;
 	return torus(final, t);
 }
 
@@ -105,13 +105,13 @@ float torusTransRotateZRepeatXZ(vec3 p, vec2 t, vec3 trans, float angle, int r){
 			vec4(0,0,1,0),
 			vec4(0,0,0,1));
 	mat4 invRT = inverse(R * T);
-	vec3 final = (vec4(mod(p.x, r) - r/2, p.y, mod(p.z - r/2, r) - r/2, 1) * invRT).xyz;
+	vec3 final = (vec4(mod(p.x - 4, r) - r/2, p.y, mod(p.z - 4, r) - r/2, 1) * invRT).xyz;
 	return torus(final, t);
 }
 
 float getSDF(vec3 p){
 	float torus1 = torusTransRotateXRepeatXZ(p, vec2(3,0.5), vec3(0,0,0), M_PI/2, 8);
-	float torus2 = torus(vec3(mod(p.x, 8) - 4, p.y, mod(p.z, 8) - 4), vec2(3, 0.5));
+	float torus2 = torus(vec3(mod(p.x - 4, 8) - 4, p.y, mod(p.z, 8) - 4), vec2(3, 0.5));
 	float torus3 = torusTransRotateZRepeatXZ(p, vec2(3,0.5), vec3(0,0,0), M_PI/2, 8);
 	return min(torus3, min(torus1, torus2));
 }
