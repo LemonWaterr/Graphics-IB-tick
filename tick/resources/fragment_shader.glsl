@@ -125,8 +125,9 @@ float torusTransRotateZRepeatXZ(vec3 p, vec2 t, vec3 trans, float angle, int r){
 }
 
 float getSDF(vec3 p){
-	float torus1 = torusTransRotateX(p, vec2(3,1), vec3(0,3,0), 0);
-	return torus1;
+	vec3 newP = vec3(p.x * 1/3, (p.y - 3) + sin(p.x + currentTime), p.z);
+	float torus1 = torus(newP, vec2(3,1));
+	return torus1/5;
 }
 
 float getSDFWithPlane(vec3 p){
